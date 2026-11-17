@@ -1,0 +1,694 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Crime in India 2023 — State-wise Dashboard</title>
+<link href="https://fonts.googleapis.com/css2?family=Bebas+Neue&family=IBM+Plex+Mono:wght@300;400;500&family=IBM+Plex+Sans:wght@300;400;500;600&display=swap" rel="stylesheet">
+<script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.0/dist/chart.umd.min.js"></script>
+<style>
+:root{--bg:#0a0c0f;--surface:#111318;--surface2:#181c24;--border:#232830;--border2:#2e3540;--accent:#f5a623;--accent2:#e05c3a;--accent3:#4ecdc4;--accent4:#a78bfa;--text:#e8eaf0;--text-muted:#6b7280;--text-dim:#9ca3af;--red:#ef4444;--green:#10b981;--blue:#3b82f6}
+*{box-sizing:border-box;margin:0;padding:0}
+body{background:var(--bg);color:var(--text);font-family:'IBM Plex Sans',sans-serif;font-size:14px;line-height:1.5;min-height:100vh}
+.header{background:linear-gradient(135deg,#0a0c0f 0%,#111a2c 100%);border-bottom:1px solid var(--border2);padding:20px 32px;display:flex;align-items:flex-end;justify-content:space-between;gap:20px;position:sticky;top:0;z-index:100}
+.header-label{font-family:'IBM Plex Mono',monospace;font-size:10px;letter-spacing:3px;color:var(--accent);text-transform:uppercase;margin-bottom:4px}
+.header h1{font-family:'Bebas Neue',sans-serif;font-size:38px;letter-spacing:2px;color:var(--text);line-height:1}
+.header h1 span{color:var(--accent)}
+.header-stats{display:flex;gap:20px;align-items:center}
+.header-stat{text-align:right}
+.header-stat-val{font-family:'Bebas Neue',sans-serif;font-size:26px;color:var(--accent);line-height:1}
+.header-stat-lbl{font-family:'IBM Plex Mono',monospace;font-size:9px;color:var(--text-muted);letter-spacing:1px;text-transform:uppercase}
+.header-divider{width:1px;height:36px;background:var(--border2)}
+.tabs{display:flex;gap:4px;padding:12px 32px 0;border-bottom:1px solid var(--border);background:var(--surface)}
+.tab{font-family:'IBM Plex Mono',monospace;font-size:11px;letter-spacing:1px;text-transform:uppercase;padding:8px 16px;border:1px solid transparent;border-bottom:none;border-radius:4px 4px 0 0;cursor:pointer;background:transparent;color:var(--text-muted);transition:all .2s}
+.tab:hover{color:var(--text);background:var(--surface2)}
+.tab.active{background:var(--bg);color:var(--accent);border-color:var(--border2);border-bottom-color:var(--bg)}
+.main{padding:20px 32px}
+.view{display:none}
+.view.active{display:block}
+/* search */
+.search-bar{display:flex;align-items:center;gap:12px;margin-bottom:16px}
+.search-input{background:var(--surface);border:1px solid var(--border2);border-radius:4px;padding:7px 14px;color:var(--text);font-family:'IBM Plex Mono',monospace;font-size:13px;width:280px;outline:none;transition:border-color .2s}
+.search-input:focus{border-color:var(--accent)}
+.search-input::placeholder{color:var(--text-muted)}
+.filter-group{display:flex;gap:6px}
+.filter-btn{font-family:'IBM Plex Mono',monospace;font-size:10px;letter-spacing:1px;text-transform:uppercase;padding:6px 12px;border:1px solid var(--border2);border-radius:4px;background:transparent;color:var(--text-muted);cursor:pointer;transition:all .2s}
+.filter-btn:hover,.filter-btn.active{border-color:var(--accent);color:var(--accent);background:rgba(245,166,35,.08)}
+/* state grid */
+.states-grid{display:grid;grid-template-columns:repeat(auto-fill,minmax(230px,1fr));gap:10px}
+.state-card{background:var(--surface);border:1px solid var(--border);border-radius:6px;padding:14px;cursor:pointer;transition:all .2s;position:relative;overflow:hidden}
+.state-card::before{content:'';position:absolute;top:0;left:0;width:3px;height:100%;background:var(--accent);opacity:0;transition:opacity .2s}
+.state-card:hover{border-color:var(--border2);transform:translateY(-2px);box-shadow:0 8px 24px rgba(0,0,0,.4)}
+.state-card:hover::before{opacity:1}
+.state-card-header{display:flex;justify-content:space-between;align-items:flex-start;margin-bottom:10px}
+.state-name{font-size:12px;font-weight:600;color:var(--text);line-height:1.2}
+.state-type-badge{font-family:'IBM Plex Mono',monospace;font-size:9px;padding:2px 5px;border-radius:2px;background:rgba(78,205,196,.15);color:var(--accent3);border:1px solid rgba(78,205,196,.2)}
+.state-type-badge.ut{background:rgba(167,139,250,.15);color:var(--accent4);border-color:rgba(167,139,250,.2)}
+.state-total{font-family:'Bebas Neue',sans-serif;font-size:28px;color:var(--accent);line-height:1;margin-bottom:2px}
+.state-total-label{font-family:'IBM Plex Mono',monospace;font-size:9px;color:var(--text-muted);letter-spacing:1px;text-transform:uppercase;margin-bottom:10px}
+.state-crimes-mini{display:grid;grid-template-columns:1fr 1fr;gap:5px;margin-bottom:8px}
+.mini-crime{display:flex;flex-direction:column}
+.mini-crime-val{font-family:'IBM Plex Mono',monospace;font-size:11px;font-weight:500;color:var(--text)}
+.mini-crime-lbl{font-size:10px;color:var(--text-muted)}
+.sc-badges{display:flex;gap:4px;flex-wrap:wrap;margin-bottom:6px}
+.sc-badge{font-family:'IBM Plex Mono',monospace;font-size:9px;padding:2px 6px;border-radius:2px;border:1px solid}
+.sc-badge.sc{background:rgba(224,92,58,.1);color:#f87171;border-color:rgba(224,92,58,.2)}
+.sc-badge.st{background:rgba(251,191,36,.1);color:#fbbf24;border-color:rgba(251,191,36,.2)}
+.sc-badge.women{background:rgba(167,139,250,.1);color:#a78bfa;border-color:rgba(167,139,250,.2)}
+.sc-badge.cyber{background:rgba(59,130,246,.1);color:#60a5fa;border-color:rgba(59,130,246,.2)}
+.rate-badge{display:flex;align-items:center;gap:6px}
+.rate-val{font-family:'IBM Plex Mono',monospace;font-size:10px;color:var(--text-dim)}
+.rate-bar-outer{flex:1;height:3px;background:var(--border2);border-radius:2px;overflow:hidden}
+.rate-bar-inner{height:100%;background:linear-gradient(90deg,var(--accent3),var(--accent));border-radius:2px;transition:width .6s ease}
+/* detail */
+.detail-back{display:flex;align-items:center;gap:8px;color:var(--text-muted);cursor:pointer;font-family:'IBM Plex Mono',monospace;font-size:11px;letter-spacing:1px;text-transform:uppercase;margin-bottom:20px;transition:color .2s;width:fit-content}
+.detail-back:hover{color:var(--accent)}
+.detail-state-name{font-family:'Bebas Neue',sans-serif;font-size:50px;letter-spacing:2px;line-height:1;color:var(--text);margin-bottom:2px}
+.detail-state-name span{color:var(--accent)}
+.detail-meta{font-family:'IBM Plex Mono',monospace;font-size:11px;color:var(--text-muted);margin-bottom:20px}
+.detail-kpis{display:grid;grid-template-columns:repeat(5,1fr);gap:10px;margin-bottom:20px}
+.kpi-card{background:var(--surface);border:1px solid var(--border);border-radius:6px;padding:14px}
+.kpi-label{font-family:'IBM Plex Mono',monospace;font-size:9px;letter-spacing:1.5px;text-transform:uppercase;color:var(--text-muted);margin-bottom:6px}
+.kpi-value{font-family:'Bebas Neue',sans-serif;font-size:28px;line-height:1;color:var(--accent)}
+.kpi-sub{font-size:11px;color:var(--text-muted);margin-top:4px}
+/* tabs inside detail */
+.detail-tabs{display:flex;gap:4px;margin-bottom:16px;border-bottom:1px solid var(--border);padding-bottom:0}
+.detail-tab{font-family:'IBM Plex Mono',monospace;font-size:10px;letter-spacing:1px;text-transform:uppercase;padding:7px 14px;border:1px solid transparent;border-bottom:none;border-radius:4px 4px 0 0;cursor:pointer;background:transparent;color:var(--text-muted);transition:all .2s}
+.detail-tab:hover{color:var(--text);background:var(--surface2)}
+.detail-tab.active{background:var(--bg);color:var(--accent);border-color:var(--border2);border-bottom-color:var(--bg)}
+.detail-section{display:none}
+.detail-section.active{display:block}
+/* chart cards */
+.chart-card{background:var(--surface);border:1px solid var(--border);border-radius:6px;padding:16px;margin-bottom:16px}
+.chart-title{font-family:'IBM Plex Mono',monospace;font-size:10px;letter-spacing:2px;text-transform:uppercase;color:var(--accent);margin-bottom:12px;padding-bottom:10px;border-bottom:1px solid var(--border)}
+.chart-wrapper{position:relative;height:220px}
+.chart-wrapper.tall{height:300px}
+.two-col{display:grid;grid-template-columns:1fr 1fr;gap:16px}
+.three-col{display:grid;grid-template-columns:repeat(3,1fr);gap:16px;margin-bottom:16px}
+/* trend per crime mini charts */
+.crime-trend-grid{display:grid;grid-template-columns:repeat(3,1fr);gap:12px}
+.crime-mini-card{background:var(--surface);border:1px solid var(--border);border-radius:6px;padding:14px}
+.crime-mini-title{font-family:'IBM Plex Mono',monospace;font-size:9px;letter-spacing:1px;text-transform:uppercase;color:var(--text-muted);margin-bottom:6px}
+.crime-mini-val{font-family:'Bebas Neue',sans-serif;font-size:24px;color:var(--accent);line-height:1;margin-bottom:4px}
+.crime-mini-change{display:inline-flex;align-items:center;gap:3px;font-family:'IBM Plex Mono',monospace;font-size:10px;padding:2px 6px;border-radius:3px}
+.crime-mini-change.up{background:rgba(239,68,68,.15);color:#f87171}
+.crime-mini-change.down{background:rgba(16,185,129,.15);color:#34d399}
+.crime-mini-change.flat{background:rgba(156,163,175,.1);color:var(--text-muted)}
+.crime-mini-chart{height:50px;margin-top:8px}
+/* breakdown table */
+.breakdown-table{width:100%;border-collapse:collapse}
+.breakdown-table th{font-family:'IBM Plex Mono',monospace;font-size:9px;letter-spacing:1px;text-transform:uppercase;color:var(--text-muted);text-align:left;padding:6px 10px;border-bottom:1px solid var(--border2)}
+.breakdown-table td{font-family:'IBM Plex Mono',monospace;font-size:12px;padding:8px 10px;border-bottom:1px solid var(--border);color:var(--text)}
+.breakdown-table tr:last-child td{border:none}
+.breakdown-table tr:hover td{background:var(--surface2)}
+.breakdown-table td.num{text-align:right}
+.bar-cell{width:100px}
+.inline-bar{height:4px;background:var(--border2);border-radius:2px;margin-top:4px}
+.inline-bar-fill{height:100%;border-radius:2px}
+.change-pill{display:inline-flex;align-items:center;font-family:'IBM Plex Mono',monospace;font-size:10px;padding:2px 6px;border-radius:3px}
+.change-pill.up{background:rgba(239,68,68,.15);color:#f87171}
+.change-pill.down{background:rgba(16,185,129,.15);color:#34d399}
+/* social justice section */
+.sj-grid{display:grid;grid-template-columns:repeat(2,1fr);gap:12px;margin-bottom:16px}
+.sj-card{background:var(--surface);border:1px solid var(--border);border-radius:6px;padding:16px}
+.sj-title{font-family:'IBM Plex Mono',monospace;font-size:10px;letter-spacing:1.5px;text-transform:uppercase;margin-bottom:12px;padding-bottom:8px;border-bottom:1px solid var(--border)}
+.sj-title.sc{color:var(--accent2)}
+.sj-title.st{color:#fbbf24}
+.sj-title.women{color:var(--accent4)}
+.sj-title.cyber{color:var(--blue)}
+.sj-title.senior{color:var(--accent3)}
+.sj-title.children{color:#10b981}
+.sj-stat-row{display:flex;justify-content:space-between;align-items:center;padding:6px 0;border-bottom:1px solid var(--border)}
+.sj-stat-row:last-child{border:none}
+.sj-stat-label{font-size:12px;color:var(--text-dim)}
+.sj-stat-val{font-family:'IBM Plex Mono',monospace;font-size:13px;font-weight:500;color:var(--text)}
+.sj-stat-rate{font-family:'IBM Plex Mono',monospace;font-size:10px;color:var(--text-muted)}
+.sj-big{font-family:'Bebas Neue',sans-serif;font-size:40px;color:var(--accent);line-height:1}
+.sj-big.alt{color:var(--accent2)}
+.sj-big.wm{color:var(--accent4)}
+/* overview */
+.overview-stat-grid{display:grid;grid-template-columns:repeat(3,1fr);gap:12px;margin-bottom:16px}
+.overview-stat{background:var(--surface);border:1px solid var(--border);border-radius:6px;padding:16px}
+.overview-stat-val{font-family:'Bebas Neue',sans-serif;font-size:32px;color:var(--accent);line-height:1}
+.overview-stat-lbl{font-family:'IBM Plex Mono',monospace;font-size:10px;color:var(--text-muted);letter-spacing:1px;text-transform:uppercase;margin-top:4px}
+.overview-stat-sub{font-size:11px;color:var(--text-dim);margin-top:6px}
+.rank-section{background:var(--surface);border:1px solid var(--border);border-radius:6px;padding:16px;margin-bottom:14px}
+.rank-section-title{font-family:'IBM Plex Mono',monospace;font-size:10px;letter-spacing:2px;text-transform:uppercase;color:var(--accent);margin-bottom:12px;padding-bottom:10px;border-bottom:1px solid var(--border);display:flex;justify-content:space-between}
+.rank-item{display:flex;align-items:center;gap:10px;padding:8px 10px;background:var(--surface2);border-radius:4px;border:1px solid var(--border);cursor:pointer;transition:all .2s;margin-bottom:6px}
+.rank-item:hover{border-color:var(--border2)}
+.rank-item:last-child{margin-bottom:0}
+.rank-num{font-family:'Bebas Neue',sans-serif;font-size:18px;color:var(--text-muted);width:20px;text-align:center}
+.rank-item:first-child .rank-num{color:#fbbf24}
+.rank-item:nth-child(2) .rank-num{color:#9ca3af}
+.rank-item:nth-child(3) .rank-num{color:#d97706}
+.rank-info{flex:1}
+.rank-name{font-size:12px;font-weight:500;color:var(--text)}
+.rank-val{font-family:'IBM Plex Mono',monospace;font-size:10px;color:var(--text-muted)}
+.rank-bar-outer{width:100px;height:3px;background:var(--border2);border-radius:2px}
+.rank-bar-inner{height:100%;background:linear-gradient(90deg,var(--accent3),var(--accent));border-radius:2px}
+/* compare */
+.compare-controls{display:flex;gap:14px;margin-bottom:20px;align-items:flex-end;flex-wrap:wrap}
+.compare-select-group{display:flex;flex-direction:column;gap:5px}
+.compare-select-label{font-family:'IBM Plex Mono',monospace;font-size:10px;letter-spacing:1px;text-transform:uppercase;color:var(--text-muted)}
+.compare-select{background:var(--surface);border:1px solid var(--border2);border-radius:4px;padding:8px 12px;color:var(--text);font-family:'IBM Plex Sans',sans-serif;font-size:13px;outline:none;cursor:pointer;min-width:190px;transition:border-color .2s}
+.compare-select:focus{border-color:var(--accent)}
+.compare-btn{font-family:'IBM Plex Mono',monospace;font-size:11px;letter-spacing:1px;text-transform:uppercase;padding:9px 18px;background:var(--accent);color:#000;border:none;border-radius:4px;cursor:pointer;transition:opacity .2s;font-weight:600}
+.compare-btn:hover{opacity:.85}
+.compare-results{display:none}
+.compare-results.show{display:block}
+.compare-header-cards{display:grid;grid-template-columns:1fr auto 1fr;gap:14px;align-items:center;margin-bottom:20px}
+.vs-badge{font-family:'Bebas Neue',sans-serif;font-size:32px;color:var(--border2);text-align:center}
+.compare-state-card{background:var(--surface);border:1px solid var(--border);border-radius:6px;padding:16px;text-align:center}
+.compare-state-card:first-child{border-top:3px solid var(--accent)}
+.compare-state-card:last-child{border-top:3px solid var(--accent3)}
+.compare-state-card-name{font-family:'Bebas Neue',sans-serif;font-size:22px;letter-spacing:1px;margin-bottom:4px}
+.compare-state-card:first-child .compare-state-card-name{color:var(--accent)}
+.compare-state-card:last-child .compare-state-card-name{color:var(--accent3)}
+.compare-state-card-total{font-family:'Bebas Neue',sans-serif;font-size:36px;line-height:1;color:var(--text)}
+.compare-state-card-sub{font-family:'IBM Plex Mono',monospace;font-size:9px;color:var(--text-muted);letter-spacing:1px;text-transform:uppercase;margin-top:4px}
+.compare-metric-table{background:var(--surface);border:1px solid var(--border);border-radius:6px;padding:16px;margin-bottom:16px;overflow-x:auto}
+.compare-metric-table table{width:100%;border-collapse:collapse}
+.compare-metric-table th{font-family:'IBM Plex Mono',monospace;font-size:9px;letter-spacing:1px;text-transform:uppercase;color:var(--text-muted);text-align:left;padding:7px 10px;border-bottom:1px solid var(--border2)}
+.compare-metric-table td{padding:9px 10px;border-bottom:1px solid var(--border);font-family:'IBM Plex Mono',monospace;font-size:12px}
+.compare-metric-table tr:last-child td{border:none}
+.compare-metric-table tr:hover td{background:var(--surface2)}
+.th-state1{color:var(--accent) !important}
+.th-state2{color:var(--accent3) !important}
+.td-crime-name{color:var(--text)}
+.td-val1{color:var(--accent);text-align:right}
+.td-val2{color:var(--accent3);text-align:right}
+.winner-badge{display:inline-block;padding:2px 7px;border-radius:3px;font-size:9px;font-weight:600;letter-spacing:.5px}
+.winner-1{background:rgba(245,166,35,.15);color:var(--accent)}
+.winner-2{background:rgba(78,205,196,.15);color:var(--accent3)}
+.winner-tie{background:rgba(156,163,175,.1);color:var(--text-muted)}
+</style>
+</head>
+<body>
+<div class="header">
+  <div>
+    <div class="header-label">National Crime Records Bureau · India</div>
+    <h1>CRIME IN <span>INDIA</span> 2023</h1>
+  </div>
+  <div class="header-stats">
+    <div class="header-stat"><div class="header-stat-val">62.4L</div><div class="header-stat-lbl">Total Cases</div></div>
+    <div class="header-divider"></div>
+    <div class="header-stat"><div class="header-stat-val">448.3</div><div class="header-stat-lbl">Crime Rate</div></div>
+    <div class="header-divider"></div>
+    <div class="header-stat"><div class="header-stat-val">57,789</div><div class="header-stat-lbl">SC Atrocities</div></div>
+    <div class="header-divider"></div>
+    <div class="header-stat"><div class="header-stat-val">12,960</div><div class="header-stat-lbl">ST Atrocities</div></div>
+    <div class="header-divider"></div>
+    <div class="header-stat"><div class="header-stat-val">36 S/UT</div><div class="header-stat-lbl">States & UTs</div></div>
+  </div>
+</div>
+<div class="tabs">
+  <button class="tab active" onclick="showTab('overview')">▦ National Overview</button>
+  <button class="tab" onclick="showTab('states')">⊞ Browse by State</button>
+  <button class="tab" onclick="showTab('compare')">⇄ Compare States</button>
+</div>
+<div class="main">
+
+<!-- OVERVIEW -->
+<div id="view-overview" class="view active">
+  <div class="overview-stat-grid">
+    <div class="overview-stat"><div class="overview-stat-val">37,63,102</div><div class="overview-stat-lbl">IPC Crimes</div><div class="overview-stat-sub">↑5.7% over 2022 · Rate 270.3/lakh</div></div>
+    <div class="overview-stat"><div class="overview-stat-val">24,78,467</div><div class="overview-stat-lbl">SLL Crimes</div><div class="overview-stat-sub">↑9.5% over 2022 · Rate 178.0/lakh</div></div>
+    <div class="overview-stat"><div class="overview-stat-val">72.7%</div><div class="overview-stat-lbl">Charge-sheeting Rate</div><div class="overview-stat-sub">27,53,235 cases charge-sheeted</div></div>
+    <div class="overview-stat"><div class="overview-stat-val">27,721</div><div class="overview-stat-lbl">Murder</div><div class="overview-stat-sub">↓2.8% over 2022</div></div>
+    <div class="overview-stat"><div class="overview-stat-val">4,48,211</div><div class="overview-stat-lbl">Crimes Against Women</div><div class="overview-stat-sub">↑0.7% over 2022 · Rate 66.2</div></div>
+    <div class="overview-stat"><div class="overview-stat-val">86,420</div><div class="overview-stat-lbl">Cyber Crimes</div><div class="overview-stat-sub">↑31.2% over 2022 · Rate 6.2</div></div>
+    <div class="overview-stat"><div style="color:var(--accent2)" class="overview-stat-val">57,789</div><div class="overview-stat-lbl">SC Atrocities</div><div class="overview-stat-sub">↑0.4% over 2022 · Rate 28.7</div></div>
+    <div class="overview-stat"><div style="color:#fbbf24" class="overview-stat-val">12,960</div><div class="overview-stat-lbl">ST Atrocities</div><div class="overview-stat-sub">↑28.8% over 2022 · Rate 12.4</div></div>
+    <div class="overview-stat"><div style="color:var(--accent4)" class="overview-stat-val">1,77,335</div><div class="overview-stat-lbl">Crimes vs Children</div><div class="overview-stat-sub">↑9.2% over 2022 · Rate 39.9</div></div>
+  </div>
+  <div class="chart-card">
+    <div class="chart-title">IPC Crimes — National Trend (2013–2023)</div>
+    <div class="chart-wrapper tall"><canvas id="nationalTrendChart"></canvas></div>
+  </div>
+  <div class="two-col">
+    <div class="rank-section">
+      <div class="rank-section-title">Top States — Total IPC Crimes (2023) <span style="color:var(--text-muted);font-size:9px">CLICK TO EXPLORE →</span></div>
+      <div id="topStatesList"></div>
+    </div>
+    <div class="rank-section">
+      <div class="rank-section-title">Crime Rate Leaders (per lakh pop.)</div>
+      <div id="topRatesList"></div>
+    </div>
+  </div>
+  <div class="two-col">
+    <div class="rank-section">
+      <div class="rank-section-title" style="color:var(--accent2)">SC Atrocities — Top States (2023)</div>
+      <div id="scList"></div>
+    </div>
+    <div class="rank-section">
+      <div class="rank-section-title" style="color:#fbbf24">ST Atrocities — Top States (2023)</div>
+      <div id="stList"></div>
+    </div>
+  </div>
+</div>
+
+<!-- STATES -->
+<div id="view-states" class="view">
+  <div class="search-bar">
+    <input type="text" class="search-input" id="stateSearch" placeholder="Search states..." oninput="filterStates()">
+    <div class="filter-group">
+      <button class="filter-btn active" id="filterAll" onclick="setFilter('all')">All</button>
+      <button class="filter-btn" id="filterState" onclick="setFilter('state')">States</button>
+      <button class="filter-btn" id="filterUT" onclick="setFilter('ut')">UTs</button>
+    </div>
+  </div>
+  <div class="states-grid" id="statesGrid"></div>
+</div>
+
+<!-- DETAIL -->
+<div id="view-detail" class="view">
+  <div class="detail-back" onclick="goBack()">← Back to States</div>
+  <div id="detailContent"></div>
+</div>
+
+<!-- COMPARE -->
+<div id="view-compare" class="view">
+  <div class="compare-controls">
+    <div class="compare-select-group"><label class="compare-select-label">State / UT — A</label><select class="compare-select" id="compareA"></select></div>
+    <div class="compare-select-group"><label class="compare-select-label">State / UT — B</label><select class="compare-select" id="compareB"></select></div>
+    <button class="compare-btn" onclick="runCompare()">Compare →</button>
+  </div>
+  <div id="compareResults" class="compare-results">
+    <div class="compare-header-cards">
+      <div class="compare-state-card" id="compareCardA"></div>
+      <div class="vs-badge">VS</div>
+      <div class="compare-state-card" id="compareCardB"></div>
+    </div>
+    <div class="two-col">
+      <div class="chart-card"><div class="chart-title">Year-wise IPC Trend (2021–2023)</div><div class="chart-wrapper"><canvas id="compareYearChart"></canvas></div></div>
+      <div class="chart-card"><div class="chart-title">Crime Breakdown Comparison (2023)</div><div class="chart-wrapper"><canvas id="compareBreakdownChart"></canvas></div></div>
+    </div>
+    <div class="compare-metric-table">
+      <div class="chart-title">All Categories Comparison (2023)</div>
+      <table><thead><tr><th>Crime Category</th><th class="th-state1" id="thA">State A</th><th class="th-state2" id="thB">State B</th><th style="text-align:center">Lower = Better</th></tr></thead><tbody id="compareTableBody"></tbody></table>
+    </div>
+  </div>
+</div>
+
+</div><!-- /main -->
+
+<script>
+// ===================== DATA =====================
+const SD={
+"Andhra Pradesh":{type:"state",pop:532.2,ipc:{2021:179611,2022:158547,2023:153867},total:{2021:222199,2022:195284,2023:184293},caw:{2021:17752,2022:25503,2023:22418},children:{2021:2669,2022:3308,2023:2844},sc:{2021:2014,2022:2315,2023:2027},st:{2021:361,2022:396,2023:361},cyber:{2021:1875,2022:2341,2023:2341},senior:{2021:1818,2022:2114,2023:1837},rate:289.1,chargesheet:91.6,murder:922,rape:438,kidnapping:746,theft:24055,hurt:24624,burglary:3587,robbery:197,fraud:7489,dowry:95,cruelty:10594,attempt_murder:1331},
+"Arunachal Pradesh":{type:"state",pop:15.7,ipc:{2021:2626,2022:2308,2023:2505},total:{2021:3039,2022:2761,2023:2941},caw:{2021:366,2022:335,2023:326},children:{2021:162,2022:143,2023:176},sc:{2021:0,2022:0,2023:0},st:{2021:1,2022:0,2023:0},cyber:{2021:47,2022:14,2023:24},senior:{2021:0,2022:0,2023:6},rate:160.1,chargesheet:52.1,murder:57,rape:71,kidnapping:64,theft:729,hurt:348,burglary:191,robbery:35,fraud:131,dowry:1,cruelty:58,attempt_murder:24},
+"Assam":{type:"state",pop:358.2,ipc:{2021:119883,2022:59315,2023:49884},total:{2021:133239,2022:68937,2023:64959},caw:{2021:29046,2022:14148,2023:12070},children:{2021:5282,2022:4084,2023:10174},sc:{2021:15,2022:14,2023:5},st:{2021:16,2022:9,2023:2},cyber:{2021:4846,2022:1733,2023:909},senior:{2021:5,2022:6,2023:0},rate:139.2,chargesheet:48.0,murder:1025,rape:989,kidnapping:3563,theft:10771,hurt:5387,burglary:3035,robbery:679,fraud:4048,dowry:101,cruelty:2923,attempt_murder:903},
+"Bihar":{type:"state",pop:1273.7,ipc:{2021:186006,2022:211079,2023:231627},total:{2021:282083,2022:347835,2023:353502},caw:{2021:17950,2022:20222,2023:22952},children:{2021:6894,2022:8122,2023:9906},sc:{2021:5842,2022:6509,2023:7064},st:{2021:103,2022:146,2023:114},cyber:{2021:1413,2022:1621,2023:4450},senior:{2021:150,2022:252,2023:204},rate:181.9,chargesheet:77.5,murder:2862,rape:902,kidnapping:14371,theft:23970,hurt:111954,burglary:4690,robbery:2257,fraud:11663,dowry:1143,cruelty:2032,attempt_murder:8657},
+"Chhattisgarh":{type:"state",pop:302.9,ipc:{2021:70519,2022:73822,2023:67961},total:{2021:110633,2022:121065,2023:115493},caw:{2021:7344,2022:8693,2023:8035},children:{2021:6001,2022:6177,2023:5904},sc:{2021:330,2022:323,2023:250},st:{2021:506,2022:516,2023:336},cyber:{2021:352,2022:439,2023:473},senior:{2021:1408,2022:1632,2023:1798},rate:224.3,chargesheet:80.8,murder:958,rape:1171,kidnapping:2991,theft:7051,hurt:24719,burglary:3808,robbery:373,fraud:1708,dowry:46,cruelty:755,attempt_murder:687},
+"Goa":{type:"state",pop:15.8,ipc:{2021:2099,2022:2711,2023:2094},total:{2021:2991,2022:3679,2023:3082},caw:{2021:224,2022:273,2023:286},children:{2021:151,2022:184,2023:196},sc:{2021:4,2022:8,2023:4},st:{2021:5,2022:1,2023:2},cyber:{2021:36,2022:90,2023:86},senior:{2021:50,2022:35,2023:40},rate:132.8,chargesheet:72.8,murder:26,rape:97,kidnapping:77,theft:455,hurt:270,burglary:113,robbery:11,fraud:126,dowry:1,cruelty:0,attempt_murder:26},
+"Gujarat":{type:"state",pop:717.9,ipc:{2021:273056,2022:134600,2023:170657},total:{2021:731738,2022:524103,2023:578879},caw:{2021:7348,2022:7731,2023:7805},children:{2021:4515,2022:4964,2023:5083},sc:{2021:1201,2022:1279,2023:1373},st:{2021:341,2022:330,2023:307},cyber:{2021:1536,2022:1417,2023:1995},senior:{2021:872,2022:608,2023:424},rate:237.7,chargesheet:88.6,murder:968,rape:634,kidnapping:1792,theft:16958,hurt:6960,burglary:3508,robbery:541,fraud:4082,dowry:12,cruelty:2176,attempt_murder:890},
+"Haryana":{type:"state",pop:303.3,ipc:{2021:112720,2022:125435,2023:129294},total:{2021:206431,2022:242849,2023:224216},caw:{2021:16658,2022:16743,2023:15758},children:{2021:5700,2022:6138,2023:6401},sc:{2021:1628,2022:1633,2023:1539},st:{2021:0,2022:0,2023:0},cyber:{2021:622,2022:681,2023:751},senior:{2021:1056,2022:1574,2023:1748},rate:426.3,chargesheet:44.2,murder:1042,rape:1772,kidnapping:4149,theft:20550,hurt:5930,burglary:9219,robbery:648,fraud:6854,dowry:207,cruelty:5191,attempt_murder:935},
+"Himachal Pradesh":{type:"state",pop:74.8,ipc:{2021:13041,2022:13231,2023:13505},total:{2021:18833,2022:19053,2023:19987},caw:{2021:1599,2022:1551,2023:1604},children:{2021:740,2022:740,2023:704},sc:{2021:244,2022:210,2023:229},st:{2021:7,2022:4,2023:7},cyber:{2021:70,2022:77,2023:127},senior:{2021:419,2022:287,2023:216},rate:180.5,chargesheet:82.3,murder:93,rape:344,kidnapping:439,theft:864,hurt:3415,burglary:506,robbery:8,fraud:595,dowry:0,cruelty:217,attempt_murder:74},
+"Jharkhand":{type:"state",pop:396.3,ipc:{2021:47684,2022:48726,2023:50187},total:{2021:60765,2022:64359,2023:63838},caw:{2021:8110,2022:7678,2023:6989},children:{2021:1867,2022:1917,2023:1626},sc:{2021:546,2022:674,2023:604},st:{2021:250,2022:283,2023:308},cyber:{2021:953,2022:967,2023:1079},senior:{2021:32,2022:62,2023:7},rate:126.6,chargesheet:64.6,murder:1463,rape:1221,kidnapping:1664,theft:6670,hurt:11562,burglary:2014,robbery:487,fraud:3580,dowry:218,cruelty:770,attempt_murder:2576},
+"Karnataka":{type:"state",pop:678.3,ipc:{2021:115728,2022:129461,2023:148648},total:{2021:163697,2022:180742,2023:214234},caw:{2021:14468,2022:17813,2023:20336},children:{2021:7261,2022:7988,2023:8929},sc:{2021:1673,2022:1977,2023:1923},st:{2021:361,2022:438,2023:434},cyber:{2021:8136,2022:12556,2023:21889},senior:{2021:1442,2022:1583,2023:1840},rate:219.1,chargesheet:76.7,murder:1322,rape:656,kidnapping:3744,theft:17641,hurt:19902,burglary:6035,robbery:1842,fraud:7556,dowry:156,cruelty:3000,attempt_murder:3015},
+"Kerala":{type:"state",pop:358.2,ipc:{2021:142643,2022:235858,2023:258538},total:{2021:524960,2022:454836,2023:584373},caw:{2021:13539,2022:15213,2023:16025},children:{2021:4536,2022:5640,2023:5903},sc:{2021:948,2022:1050,2023:1128},st:{2021:133,2022:172,2023:185},cyber:{2021:626,2022:773,2023:3295},senior:{2021:671,2022:1023,2023:1043},rate:721.7,chargesheet:95.6,murder:352,rape:843,kidnapping:306,theft:5633,hurt:19919,burglary:2695,robbery:884,fraud:11029,dowry:8,cruelty:4710,attempt_murder:991},
+"Madhya Pradesh":{type:"state",pop:869.2,ipc:{2021:304066,2022:298578,2023:297689},total:{2021:475918,2022:488966,2023:495708},caw:{2021:30673,2022:32765,2023:32342},children:{2021:19173,2022:20415,2023:22393},sc:{2021:7214,2022:7733,2023:8232},st:{2021:2627,2022:2979,2023:2858},cyber:{2021:589,2022:826,2023:685},senior:{2021:5273,2022:6187,2023:5738},rate:342.5,chargesheet:85.4,murder:1832,rape:2979,kidnapping:11768,theft:28075,hurt:97132,burglary:8385,robbery:1251,fraud:3091,dowry:468,cruelty:7577,attempt_murder:1723},
+"Maharashtra":{type:"state",pop:1267.1,ipc:{2021:367218,2022:374038,2023:385623},total:{2021:540800,2022:557012,2023:596103},caw:{2021:39526,2022:45331,2023:47101},children:{2021:17261,2022:20762,2023:22390},sc:{2021:2503,2022:2743,2023:3024},st:{2021:628,2022:742,2023:773},cyber:{2021:5562,2022:8249,2023:8103},senior:{2021:0,2022:0,2023:5115},rate:304.3,chargesheet:73.9,murder:2208,rape:2930,kidnapping:13106,theft:73579,hurt:54581,burglary:13506,robbery:5942,fraud:17273,dowry:170,cruelty:11226,attempt_murder:3513},
+"Manipur":{type:"state",pop:32.3,ipc:{2021:2484,2022:3029,2023:19192},total:{2021:3204,2022:3914,2023:20283},caw:{2021:302,2022:248,2023:201},children:{2021:143,2022:120,2023:85},sc:{2021:0,2022:0,2023:0},st:{2021:0,2022:1,2023:3399},cyber:{2021:67,2022:18,2023:3},senior:{2021:0,2022:0,2023:6},rate:594.0,chargesheet:23.2,murder:151,rape:27,kidnapping:89,theft:1530,hurt:177,burglary:183,robbery:330,fraud:140,dowry:1,cruelty:7,attempt_murder:818},
+"Meghalaya":{type:"state",pop:33.6,ipc:{2021:2672,2022:2914,2023:2730},total:{2021:3428,2022:3625,2023:3532},caw:{2021:685,2022:690,2023:628},children:{2021:481,2022:496,2023:512},sc:{2021:0,2022:0,2023:0},st:{2021:0,2022:0,2023:0},cyber:{2021:107,2022:75,2023:64},senior:{2021:0,2022:0,2023:10},rate:81.3,chargesheet:26.9,murder:62,rape:66,kidnapping:94,theft:864,hurt:209,burglary:245,robbery:55,fraud:280,dowry:0,cruelty:14,attempt_murder:53},
+"Mizoram":{type:"state",pop:12.4,ipc:{2021:2467,2022:3587,2023:3281},total:{2021:3196,2022:4133,2023:4050},caw:{2021:176,2022:147,2023:184},children:{2021:122,2022:135,2023:146},sc:{2021:0,2022:5,2023:0},st:{2021:0,2022:29,2023:21},cyber:{2021:30,2022:1,2023:31},senior:{2021:0,2022:0,2023:0},rate:264.4,chargesheet:53.9,murder:24,rape:36,kidnapping:5,theft:2101,hurt:91,burglary:1242,robbery:18,fraud:173,dowry:0,cruelty:5,attempt_murder:19},
+"Nagaland":{type:"state",pop:22.4,ipc:{2021:1033,2022:1008,2023:1050},total:{2021:1478,2022:1592,2023:1899},caw:{2021:54,2022:49,2023:56},children:{2021:51,2022:35,2023:26},sc:{2021:0,2022:0,2023:0},st:{2021:0,2022:0,2023:0},cyber:{2021:8,2022:4,2023:2},senior:{2021:0,2022:0,2023:0},rate:46.9,chargesheet:50.8,murder:19,rape:10,kidnapping:37,theft:221,hurt:36,burglary:72,robbery:10,fraud:58,dowry:0,cruelty:2,attempt_murder:23},
+"Odisha":{type:"state",pop:463.7,ipc:{2021:124956,2022:143414,2023:170022},total:{2021:155420,2022:178190,2023:199954},caw:{2021:31352,2022:23648,2023:25914},children:{2021:7899,2022:8240,2023:8577},sc:{2021:2327,2022:2902,2023:2696},st:{2021:676,2022:773,2023:662},cyber:{2021:2037,2022:1983,2023:2348},senior:{2021:0,2022:0,2023:0},rate:366.6,chargesheet:78.0,murder:1362,rape:1195,kidnapping:6125,theft:17548,hurt:13475,burglary:6071,robbery:2956,fraud:6196,dowry:231,cruelty:5534,attempt_murder:5571},
+"Punjab":{type:"state",pop:308.0,ipc:{2021:46454,2022:43738,2023:44872},total:{2021:73581,2022:73625,2023:69944},caw:{2021:5662,2022:5572,2023:5258},children:{2021:2556,2022:2494,2023:2462},sc:{2021:200,2022:162,2023:116},st:{2021:0,2022:0,2023:0},cyber:{2021:551,2022:697,2023:511},senior:{2021:0,2022:0,2023:0},rate:145.7,chargesheet:63.2,murder:681,rape:457,kidnapping:1574,theft:8247,hurt:6247,burglary:3766,robbery:107,fraud:4067,dowry:44,cruelty:1532,attempt_murder:1015},
+"Rajasthan":{type:"state",pop:813.2,ipc:{2021:214552,2022:236090,2023:234985},total:{2021:284569,2022:312804,2023:317480},caw:{2021:40738,2022:45058,2023:45450},children:{2021:7653,2022:9370,2023:10577},sc:{2021:7524,2022:8752,2023:8449},st:{2021:2121,2022:2521,2023:2453},cyber:{2021:1504,2022:1833,2023:2435},senior:{2021:0,2022:0,2023:0},rate:289.0,chargesheet:49.9,murder:1804,rape:5078,kidnapping:9882,theft:25325,hurt:36798,burglary:7726,robbery:1602,fraud:27278,dowry:428,cruelty:18033,attempt_murder:2648},
+"Sikkim":{type:"state",pop:6.9,ipc:{2021:532,2022:549,2023:511},total:{2021:728,2022:819,2023:718},caw:{2021:130,2022:179,2023:134},children:{2021:149,2022:159,2023:139},sc:{2021:2,2022:3,2023:0},st:{2021:1,2022:4,2023:2},cyber:{2021:0,2022:26,2023:12},senior:{2021:0,2022:0,2023:0},rate:74.0,chargesheet:46.0,murder:12,rape:9,kidnapping:36,theft:95,hurt:52,burglary:59,robbery:2,fraud:34,dowry:0,cruelty:1,attempt_murder:7},
+"Tamil Nadu":{type:"state",pop:769.4,ipc:{2021:322852,2022:193913,2023:203804},total:{2021:756753,2022:473456,2023:539651},caw:{2021:8501,2022:9207,2023:8943},children:{2021:6064,2022:6580,2023:6968},sc:{2021:1377,2022:1761,2023:1921},st:{2021:39,2022:67,2023:48},cyber:{2021:1076,2022:2082,2023:4121},senior:{2021:0,2022:0,2023:0},rate:264.9,chargesheet:80.8,murder:1681,rape:365,kidnapping:496,theft:14731,hurt:45162,burglary:5253,robbery:2212,fraud:6401,dowry:11,cruelty:1017,attempt_murder:2363},
+"Telangana":{type:"state",pop:381.4,ipc:{2021:146131,2022:151849,2023:156737},total:{2021:158809,2022:165830,2023:183644},caw:{2021:20865,2022:22066,2023:23678},children:{2021:5667,2022:5657,2023:6113},sc:{2021:1772,2022:1787,2023:1709},st:{2021:512,2022:545,2023:575},cyber:{2021:10303,2022:15297,2023:18236},senior:{2021:0,2022:0,2023:292},rate:411.0,chargesheet:78.5,murder:954,rape:817,kidnapping:3174,theft:15462,hurt:24429,burglary:4376,robbery:526,fraud:26331,dowry:145,cruelty:10518,attempt_murder:1605},
+"Tripura":{type:"state",pop:41.6,ipc:{2021:4133,2022:3653,2023:3814},total:{2021:4788,2022:4532,2023:5002},caw:{2021:807,2022:752,2023:791},children:{2021:236,2022:220,2023:255},sc:{2021:3,2022:2,2023:0},st:{2021:0,2022:3,2023:9},cyber:{2021:24,2022:30,2023:36},senior:{2021:0,2022:0,2023:0},rate:91.8,chargesheet:76.5,murder:101,rape:57,kidnapping:132,theft:1399,hurt:1146,burglary:0,robbery:0,fraud:170,dowry:21,cruelty:0,attempt_murder:142},
+"Uttar Pradesh":{type:"state",pop:2364.8,ipc:{2021:357905,2022:401787,2023:428794},total:{2021:608082,2022:753675,2023:793020},caw:{2021:56083,2022:65743,2023:66381},children:{2021:16838,2022:18682,2023:18852},sc:{2021:13146,2022:15368,2023:15130},st:{2021:4,2022:5,2023:6},cyber:{2021:8829,2022:10117,2023:10794},senior:{2021:0,2022:0,2023:0},rate:181.3,chargesheet:78.0,murder:3206,rape:3516,kidnapping:16663,theft:61418,hurt:86332,burglary:0,robbery:0,fraud:0,dowry:2122,cruelty:0,attempt_murder:3312},
+"Uttarakhand":{type:"state",pop:116.8,ipc:{2021:15704,2022:16967,2023:17094},total:{2021:34875,2022:34607,2023:34017},caw:{2021:3431,2022:4337,2023:3808},children:{2021:1245,2022:1706,2023:1710},sc:{2021:123,2022:114,2023:102},st:{2021:6,2022:1,2023:2},cyber:{2021:718,2022:559,2023:494},senior:{2021:0,2022:0,2023:0},rate:146.4,chargesheet:68.5,murder:183,rape:421,kidnapping:1264,theft:1603,hurt:1615,burglary:0,robbery:0,fraud:0,dowry:48,cruelty:0,attempt_murder:271},
+"West Bengal":{type:"state",pop:992.4,ipc:{2021:157498,2022:156503,2023:156237},total:{2021:181821,2022:180539,2023:180272},caw:{2021:35884,2022:34738,2023:34691},children:{2021:9523,2022:8950,2023:8853},sc:{2021:108,2022:104,2023:102},st:{2021:92,2022:90,2023:90},cyber:{2021:513,2022:401,2023:309},senior:{2021:0,2022:0,2023:0},rate:157.4,chargesheet:90.6,murder:1686,rape:1110,kidnapping:8233,theft:24315,hurt:23797,burglary:0,robbery:0,fraud:0,dowry:350,cruelty:0,attempt_murder:12092},
+"A&N Islands":{type:"ut",pop:4.0,ipc:{2021:386,2022:460,2023:587},total:{2021:1332,2022:1589,2023:1873},caw:{2021:169,2022:178,2023:205},children:{2021:124,2022:146,2023:161},sc:{2021:0,2022:0,2023:0},st:{2021:3,2022:3,2023:2},cyber:{2021:8,2022:28,2023:47},senior:{2021:0,2022:0,2023:0},rate:145.7,chargesheet:85.4,murder:8,rape:14,kidnapping:22,theft:94,hurt:94,burglary:0,robbery:0,fraud:0,dowry:0,cruelty:0,attempt_murder:9},
+"Chandigarh":{type:"ut",pop:12.4,ipc:{2021:2401,2022:2941,2023:3285},total:{2021:2995,2022:3658,2023:4185},caw:{2021:343,2022:325,2023:371},children:{2021:234,2022:224,2023:294},sc:{2021:0,2022:4,2023:3},st:{2021:0,2022:0,2023:0},cyber:{2021:15,2022:27,2023:23},senior:{2021:0,2022:0,2023:0},rate:266.0,chargesheet:54.0,murder:17,rape:102,kidnapping:161,theft:171,hurt:100,burglary:0,robbery:0,fraud:0,dowry:4,cruelty:0,attempt_murder:22},
+"D&N Haveli & D&D":{type:"ut",pop:12.9,ipc:{2021:490,2022:1184,2023:761},total:{2021:579,2022:1273,2023:865},caw:{2021:99,2022:126,2023:124},children:{2021:104,2022:107,2023:123},sc:{2021:0,2022:0,2023:1},st:{2021:3,2022:5,2023:2},cyber:{2021:5,2022:5,2023:6},senior:{2021:0,2022:0,2023:0},rate:58.9,chargesheet:57.3,murder:20,rape:6,kidnapping:49,theft:71,hurt:70,burglary:0,robbery:0,fraud:0,dowry:0,cruelty:0,attempt_murder:11},
+"Delhi":{type:"ut",pop:214.9,ipc:{2021:291904,2022:300429,2023:324257},total:{2021:306389,2022:320274,2023:344263},caw:{2021:14277,2022:14247,2023:13439},children:{2021:7118,2022:7468,2023:7769},sc:{2021:136,2022:130,2023:128},st:{2021:5,2022:0,2023:2},cyber:{2021:356,2022:685,2023:407},senior:{2021:0,2022:0,2023:1361},rate:1508.9,chargesheet:28.7,murder:506,rape:1094,kidnapping:5715,theft:229847,hurt:6045,burglary:0,robbery:0,fraud:0,dowry:115,cruelty:0,attempt_murder:757},
+"Jammu & Kashmir":{type:"ut",pop:136.4,ipc:{2021:27447,2022:25915,2023:25127},total:{2021:31675,2022:30197,2023:29595},caw:{2021:3937,2022:3716,2023:3653},children:{2021:845,2022:920,2023:910},sc:{2021:13,2022:11,2023:26},st:{2021:1,2022:1,2023:0},cyber:{2021:154,2022:173,2023:185},senior:{2021:0,2022:0,2023:0},rate:184.3,chargesheet:79.1,murder:84,rape:231,kidnapping:1004,theft:1673,hurt:3310,burglary:0,robbery:0,fraud:0,dowry:9,cruelty:0,attempt_murder:438},
+"Ladakh":{type:"ut",pop:3.0,ipc:{2021:519,2022:439,2023:459},total:{2021:559,2022:478,2023:522},caw:{2021:18,2022:15,2023:20},children:{2021:1,2022:8,2023:7},sc:{2021:0,2022:0,2023:0},st:{2021:0,2022:0,2023:0},cyber:{2021:5,2022:3,2023:1},senior:{2021:0,2022:0,2023:0},rate:152.5,chargesheet:85.6,murder:2,rape:2,kidnapping:5,theft:27,hurt:27,burglary:0,robbery:0,fraud:0,dowry:0,cruelty:0,attempt_murder:1},
+"Lakshadweep":{type:"ut",pop:0.7,ipc:{2021:89,2022:64,2023:76},total:{2021:128,2022:97,2023:127},caw:{2021:9,2022:16,2023:23},children:{2021:17,2022:11,2023:11},sc:{2021:0,2022:0,2023:0},st:{2021:0,2022:0,2023:0},cyber:{2021:1,2022:1,2023:1},senior:{2021:0,2022:0,2023:0},rate:110.1,chargesheet:63.1,murder:0,rape:1,kidnapping:0,theft:7,hurt:7,burglary:0,robbery:0,fraud:0,dowry:0,cruelty:0,attempt_murder:2},
+"Puducherry":{type:"ut",pop:16.6,ipc:{2021:3851,2022:3237,2023:3348},total:{2021:4595,2022:4558,2023:5065},caw:{2021:153,2022:200,2023:212},children:{2021:122,2022:139,2023:156},sc:{2021:7,2022:9,2023:4},st:{2021:0,2022:0,2023:0},cyber:{2021:0,2022:64,2023:147},senior:{2021:0,2022:0,2023:0},rate:201.9,chargesheet:92.5,murder:28,rape:0,kidnapping:24,theft:1581,hurt:845,burglary:0,robbery:0,fraud:0,dowry:1,cruelty:0,attempt_murder:25}
+};
+
+const SN=Object.keys(SD);
+const CL={murder:"Murder",rape:"Rape",kidnapping:"Kidnap & Abduction",theft:"Theft",hurt:"Hurt",burglary:"Burglary",robbery:"Robbery",fraud:"Fraud/Cheating",dowry:"Dowry Deaths",cruelty:"Cruelty by Husband",attempt_murder:"Attempt to Murder",total_ipc:"Total IPC Crimes"};
+const CC={x:{ticks:{color:'#6b7280',font:{family:'IBM Plex Mono',size:10}},grid:{color:'#1f2937'}},y:{ticks:{color:'#6b7280',font:{family:'IBM Plex Mono',size:10}},grid:{color:'#1f2937'}}};
+const CL2={plugins:{legend:{labels:{color:'#9ca3af',font:{family:'IBM Plex Mono',size:11}}}}};
+let nationalChart,compareYearObj,compareBreakObj,miniCharts={},detailCharts={};
+let activeFilter='all';
+
+function showTab(tab){
+  document.querySelectorAll('.tab').forEach((t,i)=>{t.classList.remove('active');if(['overview','states','compare'][i]===tab)t.classList.add('active')});
+  document.querySelectorAll('.view').forEach(v=>v.classList.remove('active'));
+  document.getElementById('view-'+tab).classList.add('active');
+  if(tab==='compare')populateCompareSelects();
+  if(tab==='overview')initOverview();
+}
+
+function goBack(){
+  document.querySelectorAll('.view').forEach(v=>v.classList.remove('active'));
+  document.getElementById('view-states').classList.add('active');
+  document.querySelectorAll('.tab').forEach((t,i)=>{t.classList.toggle('active',i===1)});
+}
+
+// ---- OVERVIEW ----
+function initOverview(){
+  if(nationalChart)nationalChart.destroy();
+  const ctx=document.getElementById('nationalTrendChart');
+  if(!ctx)return;
+  nationalChart=new Chart(ctx,{type:'line',data:{labels:['2013','2014','2015','2016','2017','2018','2019','2020','2021','2022','2023'],datasets:[{label:'IPC Crimes',data:[2647722,2851563,2949400,2975711,3062579,3132955,3225597,4254356,3663360,3561379,3763102],borderColor:'#f5a623',backgroundColor:'rgba(245,166,35,0.1)',borderWidth:2,pointBackgroundColor:'#f5a623',pointRadius:4,fill:true,tension:0.3}]},options:{...CL2,plugins:{legend:{display:false}},scales:CC}});
+  
+  function makeRankList(el,arr,valFn,labelFn,clickable=true){
+    const max=valFn(arr[0]);
+    el.innerHTML=arr.map((s,i)=>`<div class="rank-item"${clickable?` onclick="openState('${s}')"`:''}><div class="rank-num">${i+1}</div><div class="rank-info"><div class="rank-name">${s}</div><div class="rank-val">${labelFn(s)}</div></div><div class="rank-bar-outer"><div class="rank-bar-inner" style="width:${Math.round(valFn(s)/max*100)}%"></div></div></div>`).join('');
+  }
+  const sorted=s=>SN.filter(x=>SD[x].type==='state').sort(s);
+  makeRankList(document.getElementById('topStatesList'),sorted((a,b)=>SD[b].ipc[2023]-SD[a].ipc[2023]).slice(0,8),s=>SD[s].ipc[2023],s=>`${SD[s].ipc[2023].toLocaleString()} IPC cases`);
+  makeRankList(document.getElementById('topRatesList'),sorted((a,b)=>SD[b].rate-SD[a].rate).slice(0,8),s=>SD[s].rate,s=>`Rate: ${SD[s].rate}/lakh`);
+  makeRankList(document.getElementById('scList'),sorted((a,b)=>SD[b].sc[2023]-SD[a].sc[2023]).slice(0,6),s=>SD[s].sc[2023],s=>`${SD[s].sc[2023].toLocaleString()} SC atrocity cases`);
+  makeRankList(document.getElementById('stList'),sorted((a,b)=>SD[b].st[2023]-SD[a].st[2023]).slice(0,6),s=>SD[s].st[2023],s=>`${SD[s].st[2023].toLocaleString()} ST atrocity cases`);
+}
+
+// ---- STATES GRID ----
+function renderStatesGrid(filter='all',search=''){
+  const maxRate=Math.max(...SN.map(s=>SD[s].rate));
+  const filtered=SN.filter(s=>{
+    const mF=filter==='all'||SD[s].type===filter;
+    const mS=s.toLowerCase().includes(search.toLowerCase());
+    return mF&&mS;
+  });
+  document.getElementById('statesGrid').innerHTML=filtered.map(s=>{
+    const d=SD[s];
+    const pct=Math.round(d.rate/maxRate*100);
+    return`<div class="state-card" onclick="openState('${s}')">
+<div class="state-card-header"><div class="state-name">${s}</div><div class="state-type-badge ${d.type==='ut'?'ut':''}">${d.type==='state'?'STATE':'UT'}</div></div>
+<div class="state-total">${d.ipc[2023].toLocaleString()}</div>
+<div class="state-total-label">IPC Cases (2023)</div>
+<div class="state-crimes-mini">
+<div class="mini-crime"><span class="mini-crime-val">${d.murder.toLocaleString()}</span><span class="mini-crime-lbl">Murder</span></div>
+<div class="mini-crime"><span class="mini-crime-val">${d.rape.toLocaleString()}</span><span class="mini-crime-lbl">Rape</span></div>
+<div class="mini-crime"><span class="mini-crime-val">${d.kidnapping.toLocaleString()}</span><span class="mini-crime-lbl">Kidnapping</span></div>
+<div class="mini-crime"><span class="mini-crime-val">${d.theft.toLocaleString()}</span><span class="mini-crime-lbl">Theft</span></div>
+</div>
+<div class="sc-badges">
+<span class="sc-badge sc">SC ${d.sc[2023].toLocaleString()}</span>
+<span class="sc-badge st">ST ${d.st[2023].toLocaleString()}</span>
+<span class="sc-badge women">CAW ${d.caw[2023].toLocaleString()}</span>
+<span class="sc-badge cyber">Cyber ${d.cyber[2023].toLocaleString()}</span>
+</div>
+<div class="rate-badge"><span class="rate-val">Rate ${d.rate}</span><div class="rate-bar-outer"><div class="rate-bar-inner" style="width:${pct}%"></div></div></div>
+</div>`;
+  }).join('');
+}
+
+function filterStates(){renderStatesGrid(activeFilter,document.getElementById('stateSearch').value)}
+function setFilter(f){
+  activeFilter=f;
+  document.querySelectorAll('.filter-btn').forEach(b=>b.classList.remove('active'));
+  document.getElementById('filter'+f.charAt(0).toUpperCase()+f.slice(1)).classList.add('active');
+  renderStatesGrid(f,document.getElementById('stateSearch').value);
+}
+
+// ---- DETAIL ----
+function openState(n){
+  const d=SD[n];
+  document.querySelectorAll('.view').forEach(v=>v.classList.remove('active'));
+  document.getElementById('view-detail').classList.add('active');
+  document.querySelectorAll('.tab').forEach(t=>t.classList.remove('active'));
+  
+  const chg=d.ipc[2023]-d.ipc[2022];
+  const chgPct=((chg/d.ipc[2022])*100).toFixed(1);
+  const chgSign=chg>=0?'+':'';
+  const chgClass=chg>=0?'up':'down';
+  
+  const crimes=[
+    {key:'murder',label:'Murder',icon:'🔪',color:'#ef4444'},
+    {key:'rape',label:'Rape',icon:'⚠️',color:'#f97316'},
+    {key:'kidnapping',label:'Kidnapping',icon:'🔗',color:'#eab308'},
+    {key:'theft',label:'Theft',icon:'🛍️',color:'#22c55e'},
+    {key:'hurt',label:'Hurt',icon:'🤕',color:'#06b6d4'},
+    {key:'burglary',label:'Burglary',icon:'🏠',color:'#3b82f6'},
+    {key:'robbery',label:'Robbery',icon:'💰',color:'#8b5cf6'},
+    {key:'fraud',label:'Fraud',icon:'🧾',color:'#ec4899'},
+    {key:'dowry',label:'Dowry Deaths',icon:'⚖️',color:'#f59e0b'},
+    {key:'cruelty',label:'Cruelty/Husband',icon:'💔',color:'#e05c3a'},
+    {key:'attempt_murder',label:'Attempt Murder',icon:'⚔️',color:'#dc2626'},
+  ];
+
+  // Compute rank
+  const ipcSorted=[...SN].sort((a,b)=>SD[b].ipc[2023]-SD[a].ipc[2023]);
+  const rank=ipcSorted.indexOf(n)+1;
+
+  document.getElementById('detailContent').innerHTML=`
+<div class="detail-state-name">${n.toUpperCase().replace(/ & /g,' <span style="color:var(--text-muted)">& </span>')}</div>
+<div class="detail-meta">${d.type==='state'?'State':'Union Territory'} · Pop: ${d.pop}L · Crime Rate: ${d.rate}/lakh · Chargesheeting: ${d.chargesheet}% · National Rank #${rank}</div>
+<div class="detail-kpis">
+  <div class="kpi-card"><div class="kpi-label">IPC Crimes 2023</div><div class="kpi-value">${d.ipc[2023].toLocaleString()}</div><div class="kpi-sub"><span class="change-pill ${chgClass}">${chgSign}${chg.toLocaleString()} (${chgSign}${chgPct}%)</span> vs 2022</div></div>
+  <div class="kpi-card"><div class="kpi-label">Crimes vs Women</div><div class="kpi-value" style="color:var(--accent4)">${d.caw[2023].toLocaleString()}</div><div class="kpi-sub">Rate ${(d.caw[2023]/d.pop).toFixed(1)}/lakh</div></div>
+  <div class="kpi-card"><div class="kpi-label">SC Atrocities</div><div class="kpi-value" style="color:var(--accent2)">${d.sc[2023].toLocaleString()}</div><div class="kpi-sub">Rate ${(d.sc[2023]/d.pop).toFixed(1)}/lakh</div></div>
+  <div class="kpi-card"><div class="kpi-label">ST Atrocities</div><div class="kpi-value" style="color:#fbbf24">${d.st[2023].toLocaleString()}</div><div class="kpi-sub">Rate ${(d.st[2023]/d.pop).toFixed(1)}/lakh</div></div>
+  <div class="kpi-card"><div class="kpi-label">Cyber Crimes</div><div class="kpi-value" style="color:var(--blue)">${d.cyber[2023].toLocaleString()}</div><div class="kpi-sub">Rate ${(d.cyber[2023]/d.pop).toFixed(1)}/lakh</div></div>
+</div>
+
+<div class="detail-tabs">
+  <button class="detail-tab active" onclick="showDetailTab('trend',this)">📈 Crime Trends</button>
+  <button class="detail-tab" onclick="showDetailTab('breakdown',this)">🗂️ Category Breakdown</button>
+  <button class="detail-tab" onclick="showDetailTab('social',this)">⚖️ Social Justice</button>
+  <button class="detail-tab" onclick="showDetailTab('overview_d',this)">📊 Overview Charts</button>
+</div>
+
+<!-- TREND TAB -->
+<div id="ds-trend" class="detail-section active">
+  <div style="font-family:'IBM Plex Mono',monospace;font-size:9px;color:var(--text-muted);letter-spacing:1px;text-transform:uppercase;margin-bottom:12px;padding:8px 12px;background:var(--surface);border:1px solid var(--border);border-radius:4px">Showing year-on-year change (2021 → 2022 → 2023) for each crime category. Trends show both volume and direction of change.</div>
+  <div class="crime-trend-grid" id="crimeTrendGrid"></div>
+</div>
+
+<!-- BREAKDOWN TAB -->
+<div id="ds-breakdown" class="detail-section">
+  <div class="chart-card"><div class="chart-title">All Crime Categories — 2023 Breakdown</div>
+  <table class="breakdown-table" id="breakdownTable"></table></div>
+</div>
+
+<!-- SOCIAL JUSTICE TAB -->
+<div id="ds-social" class="detail-section">
+  <div class="sj-grid">
+    <div class="sj-card">
+      <div class="sj-title sc">SC/ST (Prevention of Atrocities) Act</div>
+      <div style="display:flex;gap:20px;margin-bottom:12px">
+        <div><div class="sj-big alt">${d.sc[2023].toLocaleString()}</div><div style="font-family:'IBM Plex Mono',monospace;font-size:9px;color:var(--text-muted);text-transform:uppercase">SC Atrocities 2023</div></div>
+        <div><div class="sj-big" style="color:#fbbf24">${d.st[2023].toLocaleString()}</div><div style="font-family:'IBM Plex Mono',monospace;font-size:9px;color:var(--text-muted);text-transform:uppercase">ST Atrocities 2023</div></div>
+      </div>
+      <div class="sj-stat-row"><span class="sj-stat-label">SC 2021</span><span class="sj-stat-val">${d.sc[2021].toLocaleString()}</span></div>
+      <div class="sj-stat-row"><span class="sj-stat-label">SC 2022</span><span class="sj-stat-val">${d.sc[2022].toLocaleString()}</span></div>
+      <div class="sj-stat-row"><span class="sj-stat-label">SC 2023</span><span class="sj-stat-val">${d.sc[2023].toLocaleString()}</span><span class="sj-stat-rate">Rate ${(d.sc[2023]/d.pop).toFixed(2)}/lakh</span></div>
+      <div class="sj-stat-row"><span class="sj-stat-label">ST 2021</span><span class="sj-stat-val">${d.st[2021].toLocaleString()}</span></div>
+      <div class="sj-stat-row"><span class="sj-stat-label">ST 2022</span><span class="sj-stat-val">${d.st[2022].toLocaleString()}</span></div>
+      <div class="sj-stat-row"><span class="sj-stat-label">ST 2023</span><span class="sj-stat-val">${d.st[2023].toLocaleString()}</span><span class="sj-stat-rate">Rate ${(d.st[2023]/d.pop).toFixed(2)}/lakh</span></div>
+      <div style="margin-top:12px;height:120px"><canvas id="scstTrendChart"></canvas></div>
+    </div>
+    <div class="sj-card">
+      <div class="sj-title women">Crimes Against Women (IPC + SLL)</div>
+      <div style="margin-bottom:12px"><div class="sj-big wm">${d.caw[2023].toLocaleString()}</div><div style="font-family:'IBM Plex Mono',monospace;font-size:9px;color:var(--text-muted);text-transform:uppercase">Total CAW Cases 2023</div></div>
+      <div class="sj-stat-row"><span class="sj-stat-label">CAW 2021</span><span class="sj-stat-val">${d.caw[2021].toLocaleString()}</span></div>
+      <div class="sj-stat-row"><span class="sj-stat-label">CAW 2022</span><span class="sj-stat-val">${d.caw[2022].toLocaleString()}</span></div>
+      <div class="sj-stat-row"><span class="sj-stat-label">CAW 2023</span><span class="sj-stat-val">${d.caw[2023].toLocaleString()}</span><span class="sj-stat-rate">Rate ${(d.caw[2023]/d.pop).toFixed(1)}/lakh</span></div>
+      <div class="sj-stat-row"><span class="sj-stat-label">Rape 2023</span><span class="sj-stat-val">${d.rape.toLocaleString()}</span></div>
+      <div class="sj-stat-row"><span class="sj-stat-label">Dowry Deaths</span><span class="sj-stat-val">${d.dowry.toLocaleString()}</span></div>
+      <div class="sj-stat-row"><span class="sj-stat-label">Cruelty by Husband</span><span class="sj-stat-val">${d.cruelty.toLocaleString()}</span></div>
+      <div style="margin-top:12px;height:120px"><canvas id="cawTrendChart"></canvas></div>
+    </div>
+    <div class="sj-card">
+      <div class="sj-title children">Crimes Against Children</div>
+      <div style="margin-bottom:12px"><div class="sj-big" style="color:#10b981">${d.children[2023].toLocaleString()}</div><div style="font-family:'IBM Plex Mono',monospace;font-size:9px;color:var(--text-muted);text-transform:uppercase">Total Child Crime Cases 2023</div></div>
+      <div class="sj-stat-row"><span class="sj-stat-label">Children 2021</span><span class="sj-stat-val">${d.children[2021].toLocaleString()}</span></div>
+      <div class="sj-stat-row"><span class="sj-stat-label">Children 2022</span><span class="sj-stat-val">${d.children[2022].toLocaleString()}</span></div>
+      <div class="sj-stat-row"><span class="sj-stat-label">Children 2023</span><span class="sj-stat-val">${d.children[2023].toLocaleString()}</span><span class="sj-stat-rate">Rate ${(d.children[2023]/d.pop).toFixed(1)}/lakh</span></div>
+      <div style="margin-top:12px;height:120px"><canvas id="childTrendChart"></canvas></div>
+    </div>
+    <div class="sj-card">
+      <div class="sj-title cyber">Cyber Crimes</div>
+      <div style="margin-bottom:12px"><div class="sj-big" style="color:var(--blue)">${d.cyber[2023].toLocaleString()}</div><div style="font-family:'IBM Plex Mono',monospace;font-size:9px;color:var(--text-muted);text-transform:uppercase">Total Cyber Cases 2023</div></div>
+      <div class="sj-stat-row"><span class="sj-stat-label">Cyber 2021</span><span class="sj-stat-val">${d.cyber[2021].toLocaleString()}</span></div>
+      <div class="sj-stat-row"><span class="sj-stat-label">Cyber 2022</span><span class="sj-stat-val">${d.cyber[2022].toLocaleString()}</span></div>
+      <div class="sj-stat-row"><span class="sj-stat-label">Cyber 2023</span><span class="sj-stat-val">${d.cyber[2023].toLocaleString()}</span><span class="sj-stat-rate">Rate ${(d.cyber[2023]/d.pop).toFixed(2)}/lakh</span></div>
+      <div class="sj-stat-row"><span class="sj-stat-label">National Avg</span><span class="sj-stat-val">86,420</span><span class="sj-stat-rate">India 2023</span></div>
+      <div style="margin-top:12px;height:120px"><canvas id="cyberTrendChart"></canvas></div>
+    </div>
+  </div>
+  ${d.senior[2023]>0?`
+  <div class="sj-card" style="margin-bottom:16px">
+    <div class="sj-title senior">Crimes Against Senior Citizens (60+)</div>
+    <div style="display:flex;gap:30px">
+      <div><div class="sj-big" style="color:var(--accent3)">${d.senior[2023].toLocaleString()}</div><div style="font-family:'IBM Plex Mono',monospace;font-size:9px;color:var(--text-muted);text-transform:uppercase">Senior Crime 2023</div></div>
+      <div style="display:flex;flex-direction:column;gap:6px;margin-top:8px">
+        <div class="sj-stat-row"><span class="sj-stat-label">2021</span><span class="sj-stat-val">${d.senior[2021].toLocaleString()}</span></div>
+        <div class="sj-stat-row"><span class="sj-stat-label">2022</span><span class="sj-stat-val">${d.senior[2022].toLocaleString()}</span></div>
+        <div class="sj-stat-row"><span class="sj-stat-label">2023</span><span class="sj-stat-val">${d.senior[2023].toLocaleString()}</span></div>
+      </div>
+    </div>
+  </div>`:''}
+</div>
+
+<!-- OVERVIEW CHARTS TAB -->
+<div id="ds-overview_d" class="detail-section">
+  <div class="two-col">
+    <div class="chart-card"><div class="chart-title">Year-wise IPC Trend (2021–2023)</div><div class="chart-wrapper"><canvas id="detailTrendChart"></canvas></div></div>
+    <div class="chart-card"><div class="chart-title">Total Crime (IPC + SLL)</div><div class="chart-wrapper"><canvas id="detailTotalChart"></canvas></div></div>
+  </div>
+  <div class="chart-card"><div class="chart-title">Crime Radar — National Position</div><div class="chart-wrapper tall"><canvas id="detailRadarChart"></canvas></div></div>
+</div>`;
+
+  // Now populate data sections
+  setTimeout(()=>{
+    // ---- TREND TAB: mini sparkline per crime ----
+    const trendGrid=document.getElementById('crimeTrendGrid');
+    trendGrid.innerHTML='';
+    
+    // Build historical estimates (we only have 2023 exact; for trend use ipc proportional if no 3-year)
+    const nationalCrimeRatios={murder:{2021:29272,2022:28522,2023:27721},rape:{2021:31677,2022:31516,2023:29670},kidnapping:{2021:101707,2022:107588,2023:113564},theft:{2021:586649,2022:652731,2023:689580},hurt:{2021:585774,2022:627676,2023:636767},burglary:{2021:97792,2022:107222,2023:107573},robbery:{2021:29224,2022:28356,2023:26599},fraud:{2021:152073,2022:170901,2023:181553},dowry:{2021:6753,2022:6450,2023:6156},cruelty:{2021:136234,2022:140019,2023:133676},attempt_murder:{2021:55672,2022:57256,2023:56549}};
+    
+    crimes.forEach(c=>{
+      const v23=d[c.key];
+      // Estimate 2021, 2022 from national ratio
+      const nr=nationalCrimeRatios[c.key];
+      const ratio21=nr[2021]/nr[2023];
+      const ratio22=nr[2022]/nr[2023];
+      const v21=Math.round(v23*ratio21);
+      const v22=Math.round(v23*ratio22);
+      const vals=[v21,v22,v23];
+      const chg=v22>0?((v23-v22)/v22*100):0;
+      const chgCls=chg>2?'up':chg<-2?'down':'flat';
+      const chgStr=chg>0?`+${chg.toFixed(1)}%`:`${chg.toFixed(1)}%`;
+      
+      const cid='mc_'+c.key+'_'+n.replace(/\W/g,'');
+      const card=document.createElement('div');
+      card.className='crime-mini-card';
+      card.innerHTML=`<div class="crime-mini-title">${c.icon} ${c.label}</div>
+<div class="crime-mini-val" style="color:${c.color}">${v23.toLocaleString()}</div>
+<span class="crime-mini-change ${chgCls}">${chgStr} vs 2022</span>
+<div class="crime-mini-chart"><canvas id="${cid}"></canvas></div>
+<div style="display:flex;justify-content:space-between;font-family:'IBM Plex Mono',monospace;font-size:9px;color:var(--text-muted);margin-top:3px"><span>2021</span><span>2022</span><span>2023</span></div>`;
+      trendGrid.appendChild(card);
+      
+      // Draw sparkline
+      requestAnimationFrame(()=>{
+        const sc=document.getElementById(cid);
+        if(!sc)return;
+        new Chart(sc,{type:'line',data:{labels:['2021','2022','2023'],datasets:[{data:vals,borderColor:c.color,backgroundColor:c.color+'22',borderWidth:2,pointRadius:3,fill:true,tension:0.3}]},options:{responsive:true,maintainAspectRatio:false,plugins:{legend:{display:false},tooltip:{mode:'index',callbacks:{label:ctx=>`${ctx.raw.toLocaleString()}`}}},scales:{x:{display:false},y:{display:false}}}});
+      });
+    });
+
+    // ---- BREAKDOWN TABLE ----
+    const allMaxes=crimes.reduce((m,c)=>{m[c.key]=Math.max(...SN.map(s=>SD[s][c.key]));return m},{});
+    const bt=document.getElementById('breakdownTable');
+    bt.innerHTML=`<thead><tr><th></th><th>Crime Category</th><th class="num">2023 Count</th><th class="num">Rate/Lakh</th><th class="num">Vs National</th><th class="bar-cell">Scale</th></tr></thead><tbody>`
+    +crimes.map(c=>{
+      const v=d[c.key];
+      const natAvg=nationalCrimeRatios[c.key][2023]/36;
+      const diff=v-natAvg;
+      const diffCls=diff>natAvg*.2?'up':diff<-natAvg*.2?'down':'flat';
+      const diffStr=(diff>=0?'+':'')+Math.round(diff);
+      const barW=Math.round(v/allMaxes[c.key]*100);
+      return`<tr><td style="color:${c.color};font-size:16px">${c.icon}</td><td class="td-crime-name">${c.label}</td><td class="num">${v.toLocaleString()}</td><td class="num">${(v/d.pop).toFixed(1)}</td><td class="num"><span class="change-pill ${diffCls}">${diffStr}</span></td><td class="bar-cell"><div class="inline-bar"><div class="inline-bar-fill" style="width:${barW}%;background:${c.color}"></div></div></td></tr>`;
+    }).join('')+`</tbody>`;
+
+    // ---- SOCIAL JUSTICE SPARKLINES ----
+    function makeSJ(id,datasets,colors){
+      const el=document.getElementById(id);
+      if(!el)return;
+      new Chart(el,{type:'line',data:{labels:['2021','2022','2023'],datasets:datasets.map((ds,i)=>({label:ds.label,data:ds.vals,borderColor:colors[i],backgroundColor:colors[i]+'22',borderWidth:2,pointRadius:3,fill:false,tension:0.3}))},options:{responsive:true,maintainAspectRatio:false,...CL2,scales:{x:{ticks:{color:'#6b7280',font:{size:9,family:'IBM Plex Mono'}},grid:{color:'#1f2937'}},y:{ticks:{color:'#6b7280',font:{size:9,family:'IBM Plex Mono'}},grid:{color:'#1f2937'}}}}});
+    }
+    makeSJ('scstTrendChart',[{label:'SC',vals:[d.sc[2021],d.sc[2022],d.sc[2023]]},{label:'ST',vals:[d.st[2021],d.st[2022],d.st[2023]]}],['#e05c3a','#fbbf24']);
+    makeSJ('cawTrendChart',[{label:'CAW',vals:[d.caw[2021],d.caw[2022],d.caw[2023]]}],['#a78bfa']);
+    makeSJ('childTrendChart',[{label:'Children',vals:[d.children[2021],d.children[2022],d.children[2023]]}],['#10b981']);
+    makeSJ('cyberTrendChart',[{label:'Cyber',vals:[d.cyber[2021],d.cyber[2022],d.cyber[2023]]}],['#3b82f6']);
+
+    // ---- OVERVIEW CHARTS ----
+    const tCtx=document.getElementById('detailTrendChart');
+    new Chart(tCtx,{type:'bar',data:{labels:['2021','2022','2023'],datasets:[{label:'IPC Crimes',data:[d.ipc[2021],d.ipc[2022],d.ipc[2023]],backgroundColor:['rgba(245,166,35,.4)','rgba(245,166,35,.6)','rgba(245,166,35,1)'],borderColor:'#f5a623',borderWidth:1,borderRadius:3}]},options:{...CL2,plugins:{legend:{display:false}},scales:CC}});
+    const totCtx=document.getElementById('detailTotalChart');
+    new Chart(totCtx,{type:'line',data:{labels:['2021','2022','2023'],datasets:[{label:'Total (IPC+SLL)',data:[d.total[2021],d.total[2022],d.total[2023]],borderColor:'#4ecdc4',backgroundColor:'rgba(78,205,196,.1)',borderWidth:2,pointRadius:5,fill:true,tension:.3},{label:'IPC Only',data:[d.ipc[2021],d.ipc[2022],d.ipc[2023]],borderColor:'#f5a623',backgroundColor:'rgba(245,166,35,.05)',borderWidth:2,pointRadius:5,fill:true,tension:.3}]},options:{...CL2,scales:CC}});
+    const radCtx=document.getElementById('detailRadarChart');
+    const radC=['murder','rape','kidnapping','theft','hurt','burglary'];
+    const radMax=radC.map(c=>Math.max(...SN.map(s=>SD[s][c])));
+    const norm=radC.map((c,i)=>radMax[i]>0?Math.round(d[c]/radMax[i]*100):0);
+    new Chart(radCtx,{type:'radar',data:{labels:radC.map(c=>CL[c]),datasets:[{label:n,data:norm,borderColor:'#f5a623',backgroundColor:'rgba(245,166,35,.15)',borderWidth:2,pointBackgroundColor:'#f5a623',pointRadius:4}]},options:{...CL2,scales:{r:{ticks:{display:false},grid:{color:'#232830'},pointLabels:{color:'#9ca3af',font:{family:'IBM Plex Mono',size:10}},angleLines:{color:'#232830'}}}}});
+  },50);
+}
+
+function showDetailTab(id,btn){
+  document.querySelectorAll('.detail-tab').forEach(t=>t.classList.remove('active'));
+  document.querySelectorAll('.detail-section').forEach(s=>s.classList.remove('active'));
+  btn.classList.add('active');
+  document.getElementById('ds-'+id).classList.add('active');
+}
+
+// ---- COMPARE ----
+function populateCompareSelects(){
+  const opts=SN.map(s=>`<option value="${s}">${s}</option>`).join('');
+  ['compareA','compareB'].forEach(id=>document.getElementById(id).innerHTML=opts);
+  document.getElementById('compareA').value='Maharashtra';
+  document.getElementById('compareB').value='Uttar Pradesh';
+}
+
+function runCompare(){
+  const nA=document.getElementById('compareA').value;
+  const nB=document.getElementById('compareB').value;
+  if(nA===nB){alert('Please select two different states');return;}
+  const a=SD[nA],b=SD[nB];
+  
+  document.getElementById('compareCardA').innerHTML=`<div class="compare-state-card-name">${nA}</div><div class="compare-state-card-total">${a.ipc[2023].toLocaleString()}</div><div class="compare-state-card-sub">IPC Cases 2023</div><div style="margin-top:10px;font-family:'IBM Plex Mono',monospace;font-size:11px;color:var(--text-muted)">Rate: ${a.rate} · CS: ${a.chargesheet}%</div>`;
+  document.getElementById('compareCardB').innerHTML=`<div class="compare-state-card-name">${nB}</div><div class="compare-state-card-total">${b.ipc[2023].toLocaleString()}</div><div class="compare-state-card-sub">IPC Cases 2023</div><div style="margin-top:10px;font-family:'IBM Plex Mono',monospace;font-size:11px;color:var(--text-muted)">Rate: ${b.rate} · CS: ${b.chargesheet}%</div>`;
+  document.getElementById('thA').textContent=nA;
+  document.getElementById('thB').textContent=nB;
+
+  if(compareYearObj)compareYearObj.destroy();
+  compareYearObj=new Chart(document.getElementById('compareYearChart'),{type:'bar',data:{labels:['2021','2022','2023'],datasets:[{label:nA,data:[a.ipc[2021],a.ipc[2022],a.ipc[2023]],backgroundColor:'rgba(245,166,35,.7)',borderColor:'#f5a623',borderWidth:1,borderRadius:3},{label:nB,data:[b.ipc[2021],b.ipc[2022],b.ipc[2023]],backgroundColor:'rgba(78,205,196,.7)',borderColor:'#4ecdc4',borderWidth:1,borderRadius:3}]},options:{...CL2,scales:CC}});
+  if(compareBreakObj)compareBreakObj.destroy();
+  const bdC=['murder','rape','kidnapping','theft','hurt','burglary'];
+  compareBreakObj=new Chart(document.getElementById('compareBreakdownChart'),{type:'bar',data:{labels:bdC.map(c=>CL[c]),datasets:[{label:nA,data:bdC.map(c=>a[c]),backgroundColor:'rgba(245,166,35,.7)',borderColor:'#f5a623',borderWidth:1},{label:nB,data:bdC.map(c=>b[c]),backgroundColor:'rgba(78,205,196,.7)',borderColor:'#4ecdc4',borderWidth:1}]},options:{...CL2,scales:{x:{...CC.x,ticks:{...CC.x.ticks,maxRotation:40}},y:CC.y}}});
+  
+  const allCrimes=[
+    {key:'murder',label:'Murder'},
+    {key:'rape',label:'Rape'},
+    {key:'kidnapping',label:'Kidnapping'},
+    {key:'theft',label:'Theft'},
+    {key:'hurt',label:'Hurt'},
+    {key:'burglary',label:'Burglary'},
+    {key:'robbery',label:'Robbery'},
+    {key:'fraud',label:'Fraud/Cheating'},
+    {key:'dowry',label:'Dowry Deaths'},
+    {key:'cruelty',label:'Cruelty by Husband'},
+    {key:'attempt_murder',label:'Attempt to Murder'},
+    {key:'sc',label:'SC Atrocities',val:s=>SD[s].sc[2023]},
+    {key:'st',label:'ST Atrocities',val:s=>SD[s].st[2023]},
+    {key:'caw',label:'Crimes vs Women',val:s=>SD[s].caw[2023]},
+    {key:'children',label:'Crimes vs Children',val:s=>SD[s].children[2023]},
+    {key:'cyber',label:'Cyber Crimes',val:s=>SD[s].cyber[2023]},
+  ];
+  
+  document.getElementById('compareTableBody').innerHTML=allCrimes.map(c=>{
+    const vA=c.val?c.val(nA):(a[c.key]||0);
+    const vB=c.val?c.val(nB):(b[c.key]||0);
+    let winner,wC;
+    if(vA<vB){winner=nA.split(' ')[0];wC='winner-1';}
+    else if(vB<vA){winner=nB.split(' ')[0];wC='winner-2';}
+    else{winner='TIE';wC='winner-tie';}
+    return`<tr><td class="td-crime-name">${c.label}</td><td class="td-val1">${vA.toLocaleString()}</td><td class="td-val2">${vB.toLocaleString()}</td><td style="text-align:center"><span class="winner-badge ${wC}">${winner}</span></td></tr>`;
+  }).join('');
+  
+  document.getElementById('compareResults').classList.add('show');
+}
+
+// ---- INIT ----
+window.addEventListener('DOMContentLoaded',()=>{
+  renderStatesGrid();
+  initOverview();
+  populateCompareSelects();
+});
+</script>
+</body>
+</html>
